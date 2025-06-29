@@ -35,17 +35,26 @@
         font-family: "Orbitron", sans-serif;
       }
 
-      /* Layar Awal dan Wrapper Game */
+      /* Kode Baru */
       .fullscreen-wrapper {
         width: 100%;
         height: 100vh;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: space-around;
-        padding: 1rem;
+        justify-content: center; /* Kembalikan ke center */
+        padding-top: 2rem; /* Beri jarak dari atas */
+        padding-bottom: 2rem; /* Beri jarak dari bawah */
+        padding-left: 1rem;
+        padding-right: 1rem;
+        box-sizing: border-box; /* Pastikan padding tidak menambah ukuran */
         background: url("images/background.jpg") no-repeat center center;
         background-size: cover;
+      }
+
+      /* Tambahkan style ini untuk wrapper khusus game */
+      #gameWrapper {
+        justify-content: space-between; /* Atur jarak antar elemen di dalam game */
       }
 
       /* Container utama game yang responsif */
@@ -105,8 +114,8 @@
       }
 
       #plane {
-        width: 58px;
-        height: 100px;
+        width: 46px; /* Lebih kecil dari 58px */
+        height: 80px; /* Lebih kecil dari 100px */
         background-size: 100%;
         position: absolute;
         transition: all 0.1s ease-out; /* Transisi halus untuk pergerakan */
@@ -128,8 +137,8 @@
       }
 
       .meteor {
-        width: 58px;
-        height: 86px;
+        width: 42px; /* Lebih kecil dari 58px */
+        height: 62px; /* Lebih kecil dari 86px */
         background-size: 100%;
         position: absolute;
         animation: meteorFire 0.3s infinite;
@@ -321,7 +330,7 @@ transform-origin: center center; / Memastikan skala terjadi dari tengah */
       class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 opacity-0 pointer-events-none"
     >
       <div
-        class="bg-gray-800 border-2 border-indigo-500 rounded-lg p-6 sm:p-8 text-center shadow-xl mx-4 w-full max-w-sm"
+        class="bg-gray-800 border-2 border-indigo-500 rounded-lg p-6 sm:p-8 text-center shadow-xl mx-4 w-full max-w-sm max-h-[85vh] overflow-y-auto"
       >
         <h2 class="text-4xl font-bold text-red-500 mb-4">Game Over!</h2>
         <p class="text-lg mb-2">Skor Akhir Anda:</p>
@@ -656,7 +665,7 @@ transform-origin: center center; / Memastikan skala terjadi dari tengah */
           const meteorElement = document.createElement("div");
           meteorElement.className = "meteor";
 
-          const startX = Math.random() * (gameAreaWidth - 58);
+          const startX = Math.random() * (gameAreaWidth - 42);
           meteorElement.style.left = `${startX}px`;
           meteorElement.style.top = `-${meteorElement.offsetHeight}px`;
 
