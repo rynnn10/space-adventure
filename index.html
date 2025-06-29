@@ -7,8 +7,11 @@
       content="width=device-width, initial-scale=1.0, user-scalable=no"
     />
     <title>Game Space Adventure</title>
+
+    <link rel="icon" href="images/plane1.png" type="image/png" />
     <!-- Memuat Tailwind CSS untuk styling modern -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Memuat Font dari Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,7 +42,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: space-around;
         padding: 1rem;
         background: url("images/background.jpg") no-repeat center center;
         background-size: cover;
@@ -179,6 +182,13 @@ transform-origin: center center; / Memastikan skala terjadi dari tengah */
           </button>
         </div>
       </div>
+
+      <footer
+        class="text-center text-gray-400 text-sm mt-2"
+        style="position: absolute; bottom: 1rem"
+      >
+        <p>&copy;Copyright by Riyan 2025</p>
+      </footer>
     </div>
 
     <!-- Wrapper Game Utama (Awalnya Tersembunyi) -->
@@ -264,6 +274,9 @@ transform-origin: center center; / Memastikan skala terjadi dari tengah */
           &rarr;
         </button>
       </div>
+      <footer class="text-center text-gray-400 text-sm mt-2">
+        <p>&copy; Copyright by Riyan 2025</p>
+      </footer>
     </div>
 
     <!-- Modal Info Game -->
@@ -324,12 +337,24 @@ transform-origin: center center; / Memastikan skala terjadi dari tengah */
           ></ol>
         </div>
 
-        <div class="mt-8 flex justify-center gap-4">
+        <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+          <button
+            id="backToMenuButton"
+            class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors order-last sm:order-first"
+          >
+            Kembali ke Menu
+          </button>
           <button
             id="restartButton"
             class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors"
           >
             Main Lagi
+          </button>
+          <button
+            id="shareButton"
+            class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors"
+          >
+            Bagikan
           </button>
           <button
             id="resetScoresButton"
@@ -406,6 +431,86 @@ transform-origin: center center; / Memastikan skala terjadi dari tengah */
       </div>
     </div>
 
+    <div
+      id="shareable-content"
+      style="
+        position: absolute;
+        left: -9999px; /* Posisikan jauh di luar layar */
+        top: 0;
+        width: 400px;
+        background: #0c1424;
+        color: white;
+        padding: 20px;
+        border: 2px solid #4f46e5;
+        border-radius: 1rem;
+        font-family: 'Roboto', sans-serif;
+      "
+    >
+      <h1
+        style="
+          font-family: 'Orbitron', sans-serif;
+          font-size: 2.5rem;
+          text-align: center;
+          color: #4f46e5;
+        "
+      >
+        Space Adventure
+      </h1>
+      <p style="text-align: center; font-size: 1.1rem; margin-top: 10px">
+        Saya meraih skor:
+      </p>
+      <p
+        id="share-score"
+        style="
+          font-family: 'Orbitron', sans-serif;
+          font-size: 3rem;
+          font-weight: bold;
+          text-align: center;
+          color: #facc15; /* Warna kuning */
+        "
+      >
+        0
+      </p>
+      <div
+        style="
+          border-top: 1px solid #4b5563; /* Warna abu-abu */
+          padding-top: 15px;
+          margin-top: 15px;
+        "
+      >
+        <h3
+          style="
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            text-align: center;
+            color: #818cf8; /* Warna indigo muda */
+          "
+        >
+          Peringkat Teratas
+        </h3>
+        <ol
+          id="share-highscore-list"
+          style="
+            list-style-type: decimal;
+            list-style-position: inside;
+            text-align: center;
+            font-size: 1.1rem;
+            margin-top: 10px;
+          "
+        ></ol>
+      </div>
+      <p
+        style="
+          text-align: center;
+          font-size: 0.8rem;
+          margin-top: 20px;
+          color: #9ca3af;
+        "
+      >
+        Mainkan juga game ini!
+      </p>
+    </div>
+
     <audio id="bgmsc" src="images/bgmsc.mp3" loop preload="auto"></audio>
     <audio id="gameOverSound" src="images/kalah.mp3" preload="auto"></audio>
     <audio id="moveSound" src="images/gerak.mp3" preload="auto"></audio>
@@ -446,6 +551,10 @@ transform-origin: center center; / Memastikan skala terjadi dari tengah */
         const confirmResetModal = document.getElementById("confirmResetModal");
         const confirmResetYes = document.getElementById("confirmResetYes");
         const confirmResetNo = document.getElementById("confirmResetNo");
+        // TAMBAHKAN REFERENSI INI
+        const backToMenuButton = document.getElementById("backToMenuButton");
+        // TAMBAHKAN REFERENSI INI
+        const shareButton = document.getElementById("shareButton");
 
         // === Variabel Status Game ===
         let score = 0;
@@ -492,6 +601,12 @@ transform-origin: center center; / Memastikan skala terjadi dari tengah */
           closeInfoButton.addEventListener("click", () => {
             infoModal.classList.add("opacity-0", "pointer-events-none");
           });
+        }
+
+        function showStartScreen() {
+          gameWrapper.classList.add("hidden");
+          gameOverModal.classList.add("opacity-0", "pointer-events-none");
+          startScreen.classList.remove("hidden");
         }
 
         function startGame() {
@@ -709,6 +824,70 @@ transform-origin: center center; / Memastikan skala terjadi dari tengah */
           });
         }
 
+        // Letakkan setelah fungsi displayHighScores()
+
+        async function handleShare() {
+          const shareableContent = document.getElementById("shareable-content");
+          const shareScoreEl = document.getElementById("share-score");
+          const shareListEl = document.getElementById("share-highscore-list");
+          const highScoreList = document.getElementById("highScoreList");
+
+          // 1. Isi template dengan data terbaru
+          shareScoreEl.innerText = score;
+          shareListEl.innerHTML = highScoreList.innerHTML;
+          // Hapus class 'animate-pulse' agar tidak aneh di screenshot
+          const highlightedItem = shareListEl.querySelector(".animate-pulse");
+          if (highlightedItem) {
+            highlightedItem.classList.remove("animate-pulse");
+          }
+
+          try {
+            // 2. Gunakan html2canvas untuk membuat gambar dari elemen
+            const canvas = await html2canvas(shareableContent, {
+              backgroundColor: "#0c1424",
+              useCORS: true,
+            });
+
+            // 3. Ubah canvas menjadi data gambar (Blob)
+            canvas.toBlob(async (blob) => {
+              if (!blob) {
+                alert("Gagal membuat gambar. Coba lagi.");
+                return;
+              }
+
+              const shareText = `Saya baru saja mendapatkan skor ${score} di Space Adventure! Bisakah kamu mengalahkanku?`;
+              const shareFile = new File([blob], "space-adventure-score.png", {
+                type: "image/png",
+              });
+
+              // 4. Cek apakah Web Share API (untuk mobile) didukung
+              if (
+                navigator.share &&
+                navigator.canShare({ files: [shareFile] })
+              ) {
+                await navigator.share({
+                  title: "Skor Space Adventure",
+                  text: shareText,
+                  files: [shareFile],
+                });
+              } else {
+                // 5. Fallback untuk Desktop: Unduh gambar
+                alert(
+                  "Fitur berbagi tidak didukung di browser ini. Gambar akan diunduh sebagai gantinya."
+                );
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = "space-adventure-score.png";
+                link.click();
+                URL.revokeObjectURL(link.href);
+              }
+            }, "image/png");
+          } catch (error) {
+            console.error("Gagal membagikan:", error);
+            alert("Terjadi kesalahan saat mencoba berbagi skor.");
+          }
+        }
+
         function movePlane(direction) {
           if (isGameOver || isPaused) return;
           playSound(moveSound); // <<< TAMBAHKAN DI SINI
@@ -729,7 +908,10 @@ transform-origin: center center; / Memastikan skala terjadi dari tengah */
 
         // === Event Listeners ===
         window.addEventListener("resize", setGameAreaSize);
-
+        // TAMBAHKAN EVENT LISTENER INI
+        backToMenuButton.addEventListener("click", showStartScreen);
+        // TAMBAHKAN EVENT LISTENER INI
+        shareButton.addEventListener("click", handleShare);
         restartButton.addEventListener("click", startGame);
         pauseButton.addEventListener("click", () => {
           if (!isPaused) pauseGame();
