@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Game Space Adventure</title>
+    <!-- Memuat Tailwind CSS untuk styling modern -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat Font dari Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Menggunakan font kustom dan styling dasar */
+      body {
+        font-family: "Roboto", sans-serif;
+        background-color: #0c1424;
+        color: #e0e0e0;
+        overflow: hidden; /* Mencegah scroll pada halaman */
+        touch-action: none; /* Mencegah zoom/pan di mobile */
+      }
+
+      h1,
+      h2,
+      h3 {
+        font-family: "Orbitron", sans-serif;
+      }
+
+      /* Layar Awal dan Wrapper Game */
+      .fullscreen-wrapper {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: url("images/background.jpg") no-repeat center center;
+        background-size: cover;
+      }
+
+      /* Container utama game yang responsif */
+      #game-container {
+        width: 100%;
+        max-width: 450px; /* Lebar maksimal area game */
+        background-color: #000;
+        border: 2px solid #4f46e5;
+        border-radius: 1rem;
+        box-shadow: 0 0 20px rgba(79, 70, 229, 0.7);
+        overflow: hidden; /* Memastikan semua elemen tetap di dalam container */
+        aspect-ratio: 3 / 4; /* Menjaga rasio aspek agar responsif */
+        position: relative; /* Diperlukan untuk memposisikan #main dan #area */
+      }
+
+      /* Area game dengan background yang bergerak */
+      /* Kode Baru */
+      #main {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        /* Properti background sudah tidak diperlukan lagi */
+      }
+
+      /* Tambahkan style ini untuk memastikan video mengisi container */
+      #main video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Seperti background-size: cover, tapi untuk elemen video */
+      }
+
+      /* #area sekarang adalah lapisan terpisah untuk elemen game */
+      #area {
+        width: 100%;
+        height: 100%;
+        position: absolute; /* Diposisikan secara absolut di atas #main */
+        top: 0;
+        left: 0;
+        overflow: hidden;
+        z-index: 10; /* Lapisan game di atas latar belakang */
+      }
+
+      /* Animasi untuk jet pesawat */
+      @keyframes planeJet {
+        from {
+          background-image: url("images/plane1.png");
+        }
+        to {
+          background-image: url("images/plane2.png");
+        }
+      }
+
+      #plane {
+        width: 58px;
+        height: 100px;
+        background-size: 100%;
+        position: absolute;
+        transition: all 0.1s ease-out; /* Transisi halus untuk pergerakan */
+        animation: planeJet 0.3s infinite;
+      }
+
+      #plane.freeze {
+        animation-play-state: paused;
+      }
+
+      /* Animasi untuk meteor */
+      @keyframes meteorFire {
+        from {
+          background-image: url("images/meteor1.png");
+        }
+        to {
+          background-image: url("images/meteor2.png");
+        }
+      }
+
+      .meteor {
+        width: 58px;
+        height: 86px;
+        background-size: 100%;
+        position: absolute;
+        animation: meteorFire 0.3s infinite;
+        transform: scale(
+          0.8
+        ); /* Mengecilkan menjadi 50% dari ukuran asli /
+transform-origin: center center; / Memastikan skala terjadi dari tengah */
+      }
+
+      .meteor.freeze {
+        animation-play-state: paused;
+      }
+
+      /* Styling untuk Modal dan elemen tersembunyi */
+      .modal {
+        transition: opacity 0.3s ease-in-out;
+      }
+      .hidden {
+        display: none;
+      }
+      .paused-animation {
+        animation-play-state: paused;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900">
+    <!-- Halaman Awal -->
+    <div id="startScreen" class="fullscreen-wrapper">
+      <div class="text-center bg-black bg-opacity-60 p-8 rounded-2xl shadow-lg">
+        <h1
+          class="text-5xl sm:text-6xl font-bold text-indigo-400 tracking-widest animate-pulse"
+        >
+          Space Adventure
+        </h1>
+        <p class="mt-4 text-lg text-gray-300 max-w-md">
+          Hindari hujan meteor dan bertahanlah selama mungkin!
+        </p>
+        <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+          <button
+            id="startButton"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg text-xl transition-transform hover:scale-105"
+          >
+            Mulai Game
+          </button>
+          <button
+            id="infoButton"
+            class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-lg text-xl transition-transform hover:scale-105"
+          >
+            Info
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wrapper Game Utama (Awalnya Tersembunyi) -->
+    <div id="gameWrapper" class="fullscreen-wrapper hidden">
+      <!-- Header: Judul, Skor, dan Tombol Jeda -->
+      <div class="text-center mb-4 w-full max-w-md mx-auto">
+        <h1
+          class="text-3xl sm:text-4xl font-bold text-indigo-400 tracking-widest"
+        >
+          Space Adventure
+        </h1>
+        <div class="flex justify-between items-center mt-2 px-2">
+          <h3 class="text-lg sm:text-xl">
+            Score: <span id="score" class="font-bold text-yellow-400">0</span>
+          </h3>
+          <div class="flex items-center gap-x-3">
+            <button
+              id="soundButton"
+              class="text-white bg-indigo-600 rounded-full p-2 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M5 17h-5v-10h5v10zm2-10v10l9 5v-20l-9 5zm11.008 2.093c.742.743 1.2 1.77 1.192 2.907-.008 1.137-.458 2.164-1.2 2.907l-1.414-1.414c.389-.39.625-.928.625-1.493s-.236-1.104-.625-1.493l1.414-1.414zm2.828 2.829c1.496 1.494 2.414 3.535 2.414 5.678 0 2.142-.918 4.185-2.414 5.678l-1.414-1.414c1.138-1.138 1.829-2.712 1.829-4.264s-.69-3.126-1.829-4.264l1.414-1.414z"
+                />
+              </svg>
+            </button>
+            <button
+              id="pauseButton"
+              class="text-white bg-indigo-600 rounded-full p-2 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kontainer Utama Game -->
+      <div id="game-container">
+        <div id="main">
+          <video
+            src="images/bg.mp4"
+            autoplay
+            loop
+            muted
+            class="w-full h-full object-cover"
+          ></video>
+        </div>
+        <div id="area">
+          <div id="plane" style="left: 160px; top: 480px"></div>
+        </div>
+      </div>
+
+      <!-- Kontrol Sentuh untuk Mobile -->
+      <div class="mt-4 flex w-full max-w-xs justify-around md:hidden">
+        <button
+          id="leftBtn"
+          class="bg-indigo-600 text-white rounded-full w-20 h-20 text-4xl font-bold select-none"
+        >
+          &larr;
+        </button>
+        <button
+          id="rightBtn"
+          class="bg-indigo-600 text-white rounded-full w-20 h-20 text-4xl font-bold select-none"
+        >
+          &rarr;
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Info Game -->
+    <div
+      id="infoModal"
+      class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 opacity-0 pointer-events-none"
+    >
+      <div
+        class="bg-gray-800 border-2 border-indigo-500 rounded-lg p-8 text-center shadow-xl mx-4 max-w-sm"
+      >
+        <h2 class="text-3xl font-bold text-yellow-400 mb-6">Cara Bermain</h2>
+        <div class="text-left space-y-3">
+          <p>
+            <strong class="text-indigo-400">Tujuan:</strong> Hindari semua
+            meteor yang berjatuhan untuk mendapatkan skor tertinggi.
+          </p>
+          <p>
+            <strong class="text-indigo-400">Kontrol PC:</strong> Gunakan tombol
+            panah Kiri (←) dan Kanan (→) untuk menggerakkan pesawat.
+          </p>
+          <p>
+            <strong class="text-indigo-400">Kontrol Mobile:</strong> Gunakan
+            tombol panah di bagian bawah layar.
+          </p>
+          <p>
+            <strong class="text-indigo-400">Jeda:</strong> Tekan tombol jeda di
+            pojok kanan atas atau tekan tombol spasi/P untuk menjeda permainan.
+          </p>
+        </div>
+        <button
+          id="closeInfoButton"
+          class="mt-8 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors"
+        >
+          Tutup
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Game Over -->
+    <div
+      id="gameOverModal"
+      class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 opacity-0 pointer-events-none"
+    >
+      <div
+        class="bg-gray-800 border-2 border-indigo-500 rounded-lg p-6 sm:p-8 text-center shadow-xl mx-4 w-full max-w-sm"
+      >
+        <h2 class="text-4xl font-bold text-red-500 mb-4">Game Over!</h2>
+        <p class="text-lg mb-2">Skor Akhir Anda:</p>
+        <p id="finalScore" class="text-3xl font-bold text-yellow-400 mb-6">0</p>
+
+        <div class="border-t border-gray-600 pt-4 mt-4">
+          <h3 class="text-2xl font-bold text-indigo-400 mb-3">
+            Peringkat Teratas
+          </h3>
+          <ol
+            id="highScoreList"
+            class="text-left text-lg space-y-1 w-4/5 mx-auto"
+          ></ol>
+        </div>
+
+        <div class="mt-8 flex justify-center gap-4">
+          <button
+            id="restartButton"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors"
+          >
+            Main Lagi
+          </button>
+          <button
+            id="resetScoresButton"
+            class="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors"
+          >
+            Reset Peringkat
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Jeda (Pause) -->
+    <div
+      id="pauseModal"
+      class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 opacity-0 pointer-events-none"
+    >
+      <div
+        class="bg-gray-800 border-2 border-indigo-500 rounded-lg p-8 text-center shadow-xl mx-4"
+      >
+        <h2 class="text-4xl font-bold text-yellow-400 mb-6">Paused</h2>
+        <button
+          id="resumeButton"
+          class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors"
+        >
+          Resume
+        </button>
+      </div>
+    </div>
+
+    <div
+      id="confirmResetModal"
+      class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 opacity-0 pointer-events-none"
+    >
+      <div
+        class="bg-gray-800 border-2 border-yellow-500 rounded-lg p-8 text-center shadow-xl mx-4 max-w-sm"
+      >
+        <div class="flex justify-center items-center mb-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-12 w-12 text-yellow-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+        </div>
+        <h2 class="text-3xl font-bold text-yellow-400 mb-4">
+          Reset Peringkat?
+        </h2>
+        <p class="text-gray-300 mb-6">
+          Apakah Anda yakin ingin menghapus semua data skor tertinggi secara
+          permanen? Tindakan ini tidak bisa dibatalkan.
+        </p>
+        <div class="flex justify-center gap-4">
+          <button
+            id="confirmResetNo"
+            class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors"
+          >
+            Batal
+          </button>
+          <button
+            id="confirmResetYes"
+            class="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors"
+          >
+            Ya, Hapus
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <audio id="bgmsc" src="images/bgmsc.mp3" loop preload="auto"></audio>
+    <audio id="gameOverSound" src="images/kalah.mp3" preload="auto"></audio>
+    <audio id="moveSound" src="images/gerak.mp3" preload="auto"></audio>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // === Referensi Elemen DOM ===
+        const startScreen = document.getElementById("startScreen");
+        const startButton = document.getElementById("startButton");
+        const gameWrapper = document.getElementById("gameWrapper");
+        const infoButton = document.getElementById("infoButton");
+        const infoModal = document.getElementById("infoModal");
+        const closeInfoButton = document.getElementById("closeInfoButton");
+
+        const scoreElement = document.getElementById("score");
+        const mainArea = document.getElementById("main");
+        const gameArea = document.getElementById("area");
+        const plane = document.getElementById("plane");
+
+        const gameOverModal = document.getElementById("gameOverModal");
+        const finalScoreElement = document.getElementById("finalScore");
+        const restartButton = document.getElementById("restartButton");
+
+        const pauseModal = document.getElementById("pauseModal");
+        const pauseButton = document.getElementById("pauseButton");
+        const resumeButton = document.getElementById("resumeButton");
+
+        const leftBtn = document.getElementById("leftBtn");
+        const rightBtn = document.getElementById("rightBtn");
+
+        // TAMBAHKAN REFERENSI DI BAWAH INI
+        const bgmsc = document.getElementById("bgmsc");
+        const gameOverSound = document.getElementById("gameOverSound");
+        const moveSound = document.getElementById("moveSound");
+        const soundButton = document.getElementById("soundButton");
+        const resetScoresButton = document.getElementById("resetScoresButton");
+        // TAMBAHKAN JUGA REFERENSI UNTUK MODAL KONFIRMASI
+        const confirmResetModal = document.getElementById("confirmResetModal");
+        const confirmResetYes = document.getElementById("confirmResetYes");
+        const confirmResetNo = document.getElementById("confirmResetNo");
+
+        // === Variabel Status Game ===
+        let score = 0;
+        let isGameOver = false;
+        let isPaused = false;
+        let isMuted = false; // <<< TAMBAHKAN INI
+        let gameLoopInterval;
+        let meteorSpawnInterval;
+        let backgroundAnimation;
+        const meteors = [];
+        let gameAreaWidth;
+        let gameAreaHeight;
+        let meteorSpeed = 2;
+        let moveIntervalLeft = null;
+        let moveIntervalRight = null;
+
+        // Letakkan ini setelah bagian "Variabel Status Game"
+        function playSound(soundElement) {
+          if (!isMuted) {
+            soundElement.currentTime = 0; // Mulai dari awal
+            soundElement.play();
+          }
+        }
+
+        function setGameAreaSize() {
+          gameAreaWidth = gameArea.offsetWidth;
+          gameAreaHeight = gameArea.offsetHeight;
+        }
+
+        function initializeGame() {
+          startScreen.classList.remove("hidden");
+          gameWrapper.classList.add("hidden");
+
+          startButton.addEventListener("click", () => {
+            startScreen.classList.add("hidden");
+            gameWrapper.classList.remove("hidden");
+            startGame();
+          });
+
+          infoButton.addEventListener("click", () => {
+            infoModal.classList.remove("opacity-0", "pointer-events-none");
+          });
+
+          closeInfoButton.addEventListener("click", () => {
+            infoModal.classList.add("opacity-0", "pointer-events-none");
+          });
+        }
+
+        function startGame() {
+          setGameAreaSize();
+          score = 0;
+          isGameOver = false;
+          isPaused = false;
+          meteorSpeed = 2;
+          scoreElement.innerHTML = score;
+          plane.style.left = `${(gameAreaWidth - plane.offsetWidth) / 2}px`;
+          plane.style.top = `${gameAreaHeight - plane.offsetHeight - 20}px`;
+
+          meteors.forEach((m) => m.element.remove());
+          meteors.length = 0;
+
+          gameOverModal.classList.add("opacity-0", "pointer-events-none");
+          pauseModal.classList.add("opacity-0", "pointer-events-none");
+          if (!isMuted) {
+            // <<< TAMBAHKAN
+            bgmsc.play();
+          }
+          resumeGame(); // Mulai atau lanjutkan permainan
+        }
+
+        function gameLoop() {
+          if (isGameOver || isPaused) return;
+
+          score++;
+          scoreElement.innerHTML = score;
+
+          if (score > 0 && score % 500 === 0) {
+            meteorSpeed += 0.5;
+            clearInterval(meteorSpawnInterval);
+            meteorSpawnInterval = setInterval(
+              spawnMeteor,
+              Math.max(500, 1500 - score / 5)
+            );
+          }
+
+          moveMeteors();
+          checkCollisions();
+        }
+
+        function spawnMeteor() {
+          if (isGameOver || isPaused) return;
+
+          const meteorElement = document.createElement("div");
+          meteorElement.className = "meteor";
+
+          const startX = Math.random() * (gameAreaWidth - 58);
+          meteorElement.style.left = `${startX}px`;
+          meteorElement.style.top = `-${meteorElement.offsetHeight}px`;
+
+          gameArea.appendChild(meteorElement);
+          meteors.push({
+            element: meteorElement,
+            y: -meteorElement.offsetHeight,
+          });
+        }
+
+        function moveMeteors() {
+          for (let i = meteors.length - 1; i >= 0; i--) {
+            const meteor = meteors[i];
+            meteor.y += meteorSpeed;
+            meteor.element.style.top = `${meteor.y}px`;
+
+            if (meteor.y > gameAreaHeight) {
+              meteor.element.remove();
+              meteors.splice(i, 1);
+            }
+          }
+        }
+
+        function checkCollisions() {
+          const planeRect = plane.getBoundingClientRect();
+          for (const meteor of meteors) {
+            const meteorRect = meteor.element.getBoundingClientRect();
+            if (
+              planeRect.left < meteorRect.right &&
+              planeRect.right > meteorRect.left &&
+              planeRect.top < meteorRect.bottom &&
+              planeRect.bottom > meteorRect.top
+            ) {
+              endGame();
+              return;
+            }
+          }
+        }
+
+        function pauseGame() {
+          if (isGameOver || isPaused) return;
+          isPaused = true;
+          clearInterval(gameLoopInterval);
+          clearInterval(meteorSpawnInterval);
+          bgmsc.pause(); // <<< TAMBAHKAN
+          if (backgroundAnimation) backgroundAnimation.pause();
+          plane.classList.add("paused-animation");
+          document
+            .querySelectorAll(".meteor")
+            .forEach((m) => m.classList.add("paused-animation"));
+
+          pauseModal.classList.remove("opacity-0", "pointer-events-none");
+        }
+
+        function resumeGame() {
+          if (isGameOver) return;
+          isPaused = false;
+          if (!isMuted) {
+            // <<< TAMBAHKAN KONDISI INI
+            bgmsc.play();
+          }
+          if (backgroundAnimation) backgroundAnimation.play();
+          clearInterval(gameLoopInterval);
+          clearInterval(meteorSpawnInterval);
+
+          gameLoopInterval = setInterval(gameLoop, 16);
+          meteorSpawnInterval = setInterval(
+            spawnMeteor,
+            Math.max(500, 1500 - score / 5)
+          );
+
+          if (backgroundAnimation) backgroundAnimation.play();
+          plane.classList.remove("paused-animation");
+          document
+            .querySelectorAll(".meteor")
+            .forEach((m) => m.classList.remove("paused-animation"));
+
+          pauseModal.classList.add("opacity-0", "pointer-events-none");
+        }
+
+        // GANTI FUNGSI endGame() LAMA DENGAN INI
+        function endGame() {
+          if (isGameOver) return;
+          isGameOver = true;
+          isPaused = true;
+
+          bgmsc.pause(); // <<< TAMBAHKAN
+          playSound(gameOverSound); // <<< TAMBAHKAN
+          finalScoreElement.innerText = score;
+
+          clearInterval(gameLoopInterval);
+          clearInterval(meteorSpawnInterval);
+
+          if (backgroundAnimation) backgroundAnimation.pause();
+          plane.classList.add("paused-animation");
+
+          finalScoreElement.innerText = score;
+
+          // === BAGIAN BARU UNTUK PERINGKAT ===
+          updateHighScores(score); // Simpan skor baru dan perbarui peringkat
+          displayHighScores(); // Tampilkan peringkat di modal
+          // ===================================
+
+          gameOverModal.classList.remove("opacity-0", "pointer-events-none");
+        }
+        // === LETAKKAN SETELAH FUNGSI endGame() ===
+
+        /**
+         * Mengambil skor dari localStorage, menambahkan skor baru,
+         * mengurutkan, dan menyimpan 5 skor tertinggi.
+         * @param {number} newScore - Skor baru dari permainan yang baru saja selesai.
+         */
+        function updateHighScores(newScore) {
+          // Ambil skor lama atau buat array kosong jika belum ada
+          const highScores =
+            JSON.parse(localStorage.getItem("spaceAdventureHighScores")) || [];
+
+          // Tambahkan skor baru ke daftar
+          highScores.push(newScore);
+
+          // Urutkan skor dari yang tertinggi ke terendah
+          highScores.sort((a, b) => b - a);
+
+          // Ambil hanya 5 skor teratas
+          const topScores = highScores.slice(0, 5);
+
+          // Simpan kembali ke localStorage
+          localStorage.setItem(
+            "spaceAdventureHighScores",
+            JSON.stringify(topScores)
+          );
+        }
+
+        /**
+         * Menampilkan daftar 5 skor tertinggi di modal Game Over.
+         */
+        function displayHighScores() {
+          const highScores =
+            JSON.parse(localStorage.getItem("spaceAdventureHighScores")) || [];
+          const highScoreList = document.getElementById("highScoreList");
+
+          // Kosongkan daftar sebelumnya
+          highScoreList.innerHTML = "";
+
+          if (highScores.length === 0) {
+            highScoreList.innerHTML =
+              '<li class="text-gray-400 text-center">Belum ada skor!</li>';
+            return;
+          }
+
+          // Buat elemen <li> untuk setiap skor dan tambahkan ke daftar
+          let scoreHighlighted = false;
+          highScores.forEach((s, index) => {
+            const li = document.createElement("li");
+            li.textContent = `${index + 1}. ${s} Poin`;
+
+            // Tandai skor yang baru saja didapat oleh pemain
+            if (s === score && !scoreHighlighted) {
+              li.classList.add("text-yellow-400", "font-bold", "animate-pulse");
+              scoreHighlighted = true;
+            } else {
+              li.classList.add("text-gray-300");
+            }
+            highScoreList.appendChild(li);
+          });
+        }
+
+        function movePlane(direction) {
+          if (isGameOver || isPaused) return;
+          playSound(moveSound); // <<< TAMBAHKAN DI SINI
+          const left = parseInt(plane.style.left);
+          const step = 15;
+
+          if (direction === "left") {
+            if (left > 0) plane.style.left = `${Math.max(0, left - step)}px`;
+          } else if (direction === "right") {
+            if (left < gameAreaWidth - plane.offsetWidth) {
+              plane.style.left = `${Math.min(
+                gameAreaWidth - plane.offsetWidth,
+                left + step
+              )}px`;
+            }
+          }
+        }
+
+        // === Event Listeners ===
+        window.addEventListener("resize", setGameAreaSize);
+
+        restartButton.addEventListener("click", startGame);
+        pauseButton.addEventListener("click", () => {
+          if (!isPaused) pauseGame();
+        });
+        resumeButton.addEventListener("click", resumeGame);
+
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "ArrowLeft" || e.key === "a") {
+            movePlane("left");
+          } else if (e.key === "ArrowRight" || e.key === "d") {
+            movePlane("right");
+          } else if (e.key === "p" || e.key === " ") {
+            e.preventDefault();
+            if (isPaused && !isGameOver) resumeGame();
+            else pauseGame();
+          }
+        });
+
+        function toggleSound() {
+          isMuted = !isMuted; // Balikkan status mute
+          const allSounds = document.querySelectorAll("audio");
+
+          allSounds.forEach((sound) => {
+            sound.muted = isMuted;
+          });
+
+          // Perbarui ikon tombol
+          if (isMuted) {
+            soundButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="M5 17h-5v-10h5v10zm2-10v10l9 5v-20l-9 5zm14.242 6.242l-1.414 1.414-2.121-2.121-1.414 1.414-2.121-2.121-1.414 1.414-2.121-2.121-1.414-1.414 2.121-2.121 1.414-1.414 2.121 2.121 1.414-1.414 2.121 2.121 1.414 1.414z"/></svg>`;
+          } else {
+            soundButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="M5 17h-5v-10h5v10zm2-10v10l9 5v-20l-9 5zm11.008 2.093c.742.743 1.2 1.77 1.192 2.907-.008 1.137-.458 2.164-1.2 2.907l-1.414-1.414c.389-.39.625-.928.625-1.493s-.236-1.104-.625-1.493l1.414-1.414zm2.828 2.829c1.496 1.494 2.414 3.535 2.414 5.678 0 2.142-.918 4.185-2.414 5.678l-1.414-1.414c1.138-1.138 1.829-2.712 1.829-4.264s-.69-3.126-1.829-4.264l1.414-1.414z"/></svg>`;
+            if (!isGameOver && !isPaused) {
+              bgmsc.play();
+            }
+          }
+        }
+
+        // === Event Listeners ===
+        soundButton.addEventListener("click", toggleSound); // <<< TAMBAHKAN
+        // TAMBAHKAN EVENT LISTENER DI BAWAH INI
+        // Kode Baru
+        resetScoresButton.addEventListener("click", () => {
+          // Tampilkan modal konfirmasi, bukan dialog confirm() bawaan
+          confirmResetModal.classList.remove(
+            "opacity-0",
+            "pointer-events-none"
+          );
+        });
+        window.addEventListener("resize", setGameAreaSize);
+
+        // Event listener untuk tombol "Ya, Hapus" di modal konfirmasi
+        confirmResetYes.addEventListener("click", () => {
+          // 1. Sembunyikan modal konfirmasi
+          confirmResetModal.classList.add("opacity-0", "pointer-events-none");
+
+          // 2. Jalankan logika penghapusan skor
+          localStorage.removeItem("spaceAdventureHighScores");
+
+          // 3. Perbarui tampilan daftar skor di layar Game Over
+          displayHighScores();
+        });
+
+        // Event listener untuk tombol "Batal"
+        confirmResetNo.addEventListener("click", () => {
+          // Cukup sembunyikan modal konfirmasi
+          confirmResetModal.classList.add("opacity-0", "pointer-events-none");
+        });
+        // ...sisa event listener...
+
+        leftBtn.addEventListener(
+          "mousedown",
+          () => (moveIntervalLeft = setInterval(() => movePlane("left"), 50))
+        );
+        rightBtn.addEventListener(
+          "mousedown",
+          () => (moveIntervalRight = setInterval(() => movePlane("right"), 50))
+        );
+        leftBtn.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+          moveIntervalLeft = setInterval(() => movePlane("left"), 50);
+        });
+        rightBtn.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+          moveIntervalRight = setInterval(() => movePlane("right"), 50);
+        });
+
+        window.addEventListener("mouseup", () => {
+          clearInterval(moveIntervalLeft);
+          clearInterval(moveIntervalRight);
+        });
+        window.addEventListener("touchend", () => {
+          clearInterval(moveIntervalLeft);
+          clearInterval(moveIntervalRight);
+        });
+
+        // === Inisialisasi Game ===
+        initializeGame();
+      });
+    </script>
+  </body>
+</html>
